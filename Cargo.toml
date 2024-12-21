@@ -1,0 +1,16 @@
+[package]
+name = "netd"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.22", features = ["cargo", "derive"] }
+crossterm = "0.28.1"
+futures = "0.3.31"
+ratatui = "0.29.0"
+rtnetlink = "0.14.1"
+serde = { version = "1.0.215", features = ["derive"] }
+serde-inline-default = "0.2.3"
+surge-ping = "0.8.1"
+tokio = { version = "1.42.0", features = ["rt-multi-thread", "macros", "process"] }
+toml = "0.8.19"
