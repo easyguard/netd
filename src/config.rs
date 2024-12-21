@@ -96,7 +96,7 @@ impl Default for InterfaceDhcpConfig {
 
 impl Config {
 	pub fn load() -> Self {
-		let config = std::fs::read_to_string("/etc/config.toml").unwrap();
+		let config = std::fs::read_to_string("/etc/config/network.toml").unwrap();
 		toml::from_str(&config).unwrap()
 	}
 }
