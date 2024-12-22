@@ -13,10 +13,8 @@ impl Interface {
 		}
 	}
 
+	/// Check if the interface exists
 	pub async fn exists(&self) -> bool {
-		// Check if the interface exists
-		// run ip link show <name> command
-		// and check exit code
 		let output = Command::new("ip")
 			.arg("link")
 			.arg("show")
@@ -27,9 +25,9 @@ impl Interface {
 		output.status.success()
 	}
 
+	/// Rename the interface.
+	/// Must be done before bringing the interface up, otherwise it will fail
 	pub async fn rename(&mut self, new_name: &str) {
-		// Rename the interface
-		// run ip link set <name> name <new_name> command
 		let output = Command::new("ip")
 			.arg("link")
 			.arg("set")
@@ -43,9 +41,8 @@ impl Interface {
 		self.name = new_name.to_string();
 	}
 
+	/// Bring the interface up
 	pub async fn up(&self) {
-		// Bring the interface up
-		// run ip link set <name> up command
 		let output = Command::new("ip")
 			.arg("link")
 			.arg("set")
@@ -57,9 +54,8 @@ impl Interface {
 		assert!(output.status.success());
 	}
 
+	/// Bring the interface down
 	pub async fn down(&self) {
-		// Bring the interface down
-		// run ip link set <name> down command
 		let output = Command::new("ip")
 			.arg("link")
 			.arg("set")
@@ -70,11 +66,9 @@ impl Interface {
 			.expect("Failed to execute command");
 		assert!(output.status.success());
 	}
-
+	
+	/// Check if the interface is up
 	pub async fn is_up(&self) -> bool {
-		// Check if the interface is up
-		// run ip link show <name> command
-		// and check if the output contains "UP"
 		let output = Command::new("ip")
 			.arg("link")
 			.arg("show")
@@ -86,9 +80,8 @@ impl Interface {
 		output.contains("UP")
 	}
 
+	/// Add an IP address to the interface
 	pub async fn add_address(&self, address: &String, mask: u8) {
-		// Add an IP address to the interface
-		// run ip addr add <address>/<mask> dev <name> command
 		let output = Command::new("ip")
 			.arg("addr")
 			.arg("add")
@@ -101,6 +94,8 @@ impl Interface {
 		assert!(output.status.success());
 	}
 
+	/// Flush all addresses from the interface.
+	/// Removes all IP addresses from the interface
 	pub async fn flush_addresses(&self) {
 		let output = Command::new("ip")
 			.arg("addr")
@@ -113,6 +108,8 @@ impl Interface {
 		assert!(output.status.success());
 	}
 
+	/// Get the gateway for the interface.
+	/// This checks the routing table for this interface and extracts the default route
 	pub async fn get_gateway(&self) -> String {
 		let output = Command::new("ip")
 			.arg("route")
@@ -132,9 +129,8 @@ impl Interface {
 		gateway.to_string()
 	}
 
+	/// Set the interface description
 	pub async fn set_description(&self, description: &str) {
-		// Set the interface description
-		// run ip link set <name> alias <description> command
 		let output = Command::new("ip")
 			.arg("link")
 			.arg("set")

@@ -1,6 +1,6 @@
 use tokio::process::Command;
 
-use crate::{config::{InterfaceConfig, InterfaceMode}, link::{dhcpc::dhcp_client, interface::Interface}};
+use crate::{config::{InterfaceConfig, InterfaceMode}, link::{dhcpc::dhcp_client, dhcpd, interface::Interface}};
 
 pub struct EthernetInterface {}
 
@@ -58,12 +58,22 @@ impl EthernetInterface {
 
 		if ifconfig.dhcp.enabled {
 			// Run a DHCP Server
-			println!("WARNING: DHCP Server not fully implemented yet! Running dhcpd service");
-			let mut status = Command::new("rc-service")
-				.arg("dhcpd")
-				.arg("start")
-				.spawn()
-				.expect("Failed to start service!");
+			// println!("WARNING: DHCP Server not fully implemented yet! Running dhcpd service");
+			// let mut status = Command::new("rc-service")
+			// 	.arg("dhcpd")
+			// 	.arg("start")
+			// 	.spawn()
+			// 	.expect("Failed to start service!");
+			let dhcpserver = dhcpd::DHCPServer::new(
+				ifconfig.dhcp.start.clone(),
+				ifconfig.dhcp.end.clone(),
+				ifname.clone(),
+				ifconfig.dhcp.dns.clone(),
+				ifconfig.dhcp.netmask.clone(),
+				ifconfig.dhcp.router.clone(),
+				3600
+			);
+			dhcpserver.start();
 		}
 		interface.set_description("CONFIGURED").await;
 	}

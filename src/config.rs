@@ -6,29 +6,9 @@ use serde_inline_default::serde_inline_default;
 #[serde_inline_default]
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-	#[serde(default)]
-	pub dhcp: DhcpConfig,
 	#[serde_inline_default(HashMap::new())]
 	pub renames: HashMap<String, String>,
 	pub interfaces: HashMap<String, InterfaceConfig>,
-}
-
-#[serde_inline_default]
-#[derive(Serialize, Deserialize)]
-pub struct DhcpConfig {
-	#[serde_inline_default(7200)]
-	pub max_lease_time: u32,
-	#[serde_inline_default(3600)]
-	pub default_lease_time: u32,
-}
-
-impl Default for DhcpConfig {
-	fn default() -> Self {
-		Self {
-			max_lease_time: 7200,
-			default_lease_time: 3600,
-		}
-	}
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -66,12 +46,11 @@ pub struct InterfaceConfig {
 pub struct InterfaceDhcpConfig {
 	#[serde_inline_default(false)]
 	pub enabled: bool,
-	pub subnet: String,
-	pub netmask: String,
-	pub router: String,
 	pub start: String,
 	pub end: String,
 	pub dns: String,
+	pub router: String,
+	pub netmask: String,
 }
 
 impl InterfaceDhcpConfig {
@@ -84,7 +63,6 @@ impl Default for InterfaceDhcpConfig {
 	fn default() -> Self {
 		Self {
 			enabled: false,
-			subnet: "".to_string(),
 			netmask: "".to_string(),
 			router: "".to_string(),
 			start: "".to_string(),

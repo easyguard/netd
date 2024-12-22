@@ -570,6 +570,7 @@ dependencies = [
  "clap",
  "crossterm",
  "futures",
+ "rand",
  "ratatui",
  "rtnetlink",
  "serde",
