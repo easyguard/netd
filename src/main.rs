@@ -8,7 +8,6 @@ use config::Config;
 use interface::ethernet::EthernetInterface;
 use link::interface::Interface;
 use futures::future::join_all;
-use tokio::process::Command;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
