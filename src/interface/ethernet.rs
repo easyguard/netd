@@ -1,6 +1,14 @@
-use tokio::process::Command;
+// use tokio::process::Command;
 
-use crate::{config::{InterfaceConfig, InterfaceMode}, link::{dhcpc::dhcp_client, dhcpd, interface::Interface}};
+use std::{net::Ipv4Addr, str::FromStr};
+
+use pnet::{packet::arp::ArpOperations, util::MacAddr};
+
+use crate::{
+	arp::send_arp_packet,
+	config::{InterfaceConfig, InterfaceMode},
+	link::{dhcpc::dhcp_client, dhcpd, interface::Interface},
+};
 
 pub struct EthernetInterface {}
 
@@ -8,6 +16,7 @@ impl EthernetInterface {
 	pub async fn configure(interface: &Interface, ifconfig: &InterfaceConfig) {
 		let ifname = interface.name.clone();
 		interface.up().await;
+		let mut failover_reconfigured = false;
 		if ifconfig.do_failover {
 			// unimplemented!("Failover not implemented yet");
 			interface.set_description("FAILOVER_PROBING").await;
@@ -28,6 +37,7 @@ impl EthernetInterface {
 					if ping.is_err() {
 						println!("[{ifname}] Router is down, beginning normal configuration");
 						interface.flush_addresses().await;
+						failover_reconfigured = true;
 						break;
 					} else {
 						println!("[{ifname}] Router is still up, continuing failover mode");
@@ -35,7 +45,9 @@ impl EthernetInterface {
 					}
 				}
 			} else {
-				println!("[{ifname}] No router found on this network, beginning normal configuration");
+				println!(
+					"[{ifname}] No router found on this network, beginning normal configuration"
+				);
 			}
 		}
 		interface.set_description("CONFIGURING").await;
@@ -49,9 +61,16 @@ impl EthernetInterface {
 			}
 		} else {
 			if ifconfig.address.is_none() || ifconfig.netmask.is_none() {
-				panic!("[{ifname}] Static interface configuration requires an address and a netmask");
+				panic!(
+					"[{ifname}] Static interface configuration requires an address and a netmask"
+				);
 			}
-			interface.add_address(&ifconfig.address.as_ref().unwrap(), ifconfig.netmask.unwrap()).await;
+			interface
+				.add_address(
+					&ifconfig.address.as_ref().unwrap(),
+					ifconfig.netmask.unwrap(),
+				)
+				.await;
 		}
 
 		println!("[{ifname}] DHCP: {:?}", ifconfig.dhcp.enabled);
@@ -71,10 +90,25 @@ impl EthernetInterface {
 				ifconfig.dhcp.dns.clone(),
 				ifconfig.dhcp.netmask.clone(),
 				ifconfig.dhcp.router.clone(),
-				3600
+				3600,
 			);
 			dhcpserver.start();
 		}
 		interface.set_description("CONFIGURED").await;
+
+		if failover_reconfigured {
+			for _ in 0..3 {
+				println!("[{ifname}] Sending gratuitous ARP packet");
+				send_arp_packet(
+					interface,
+					Ipv4Addr::from_str("10.10.99.1").unwrap(),
+					MacAddr::from_str(&interface.get_mac().await).unwrap(),
+					Ipv4Addr::from_str("10.10.99.1").unwrap(),
+					MacAddr::from_str("ff:ff:ff:ff:ff:ff").unwrap(),
+					ArpOperations::Request,
+				);
+				tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+			}
+		}
 	}
 }

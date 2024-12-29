@@ -143,4 +143,20 @@ impl Interface {
 			.expect("Failed to execute command");
 		assert!(output.status.success());
 	}
+
+	pub async fn get_mac(&self) -> String {
+		let output = Command::new("ip")
+			.arg("link")
+			.arg("show")
+			.arg(&self.name)
+			.output()
+			.await
+			.expect("Failed to execute command");
+
+		let output = String::from_utf8(output.stdout).expect("Invalid UTF-8");
+		let parts: Vec<&str> = output.split_whitespace().collect();
+		let mac = parts[parts.iter().position(|&x| x == "link/ether").unwrap() + 1];
+		mac.to_string()
+	}
+
 }

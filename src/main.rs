@@ -1,6 +1,7 @@
 mod config;
 mod interface;
 mod link;
+pub mod arp;
 
 use clap::{arg, command, Parser, Subcommand};
 use config::Config;
