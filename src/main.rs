@@ -28,7 +28,10 @@ enum Commands {
 	RUN {},
 
 	/// Reset networking
-	RESET {}
+	RESET {},
+
+	/// Reload
+	RELOAD {}
 }
 
 #[tokio::main]
@@ -44,6 +47,18 @@ async fn main() {
 		}
 		Commands::RESET {} => {
 			reset().await;
+		}
+		Commands::RELOAD {} => {
+			// Confirm that the user wants to reload
+			let confirm = dialoguer::Confirm::new()
+				.with_prompt("Are you sure you want to reload?")
+				.interact()
+				.unwrap();
+			if !confirm {
+				return;
+			}
+			reset().await;
+			run().await;
 		}
 	}
 }
@@ -115,4 +130,15 @@ async fn reset() {
 	}).collect();
 
 	join_all(futures).await;
+
+	println!("Renaming {} interfaces!", config.renames.len());
+	for entry in config.renames {
+		let old_name = entry.0;
+		let new_name = entry.1;
+		let mut interface = Interface::get_from_name(&new_name);
+		if !interface.exists().await {
+			println!("Interface {new_name} does not exist, ignoring");
+		}
+		interface.rename(&old_name).await;
+	}
 }
