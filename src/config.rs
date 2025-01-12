@@ -13,21 +13,19 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub enum InterfaceType {
-	Ethernet, Bridge
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
 pub enum InterfaceMode {
 	Static, Dhcp
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum InterfaceType {
+	Ethernet, Bridge
+}
+
 #[serde_inline_default]
 #[derive(Serialize, Deserialize)]
-pub struct InterfaceConfig {
-	#[serde_inline_default(InterfaceType::Ethernet)]
-	pub type_: InterfaceType,
+pub struct EthernetConfig {
 	pub mode: InterfaceMode,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,
@@ -39,6 +37,47 @@ pub struct InterfaceConfig {
 	#[serde(skip_serializing_if = "InterfaceDhcpConfig::is_disabled")]
 	#[serde(default)]
 	pub dhcp: InterfaceDhcpConfig,
+}
+
+#[serde_inline_default]
+#[derive(Serialize, Deserialize)]
+pub struct BridgeConfig {
+	pub interfaces: Vec<String>,
+	pub mode: InterfaceMode,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub address: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub netmask: Option<u8>,
+	#[serde(skip_serializing_if = "std::ops::Not::not")]
+	#[serde_inline_default(false)]
+	pub do_failover: bool,
+	#[serde(skip_serializing_if = "InterfaceDhcpConfig::is_disabled")]
+	#[serde(default)]
+	pub dhcp: InterfaceDhcpConfig,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+pub enum InterfaceTypeConfig {
+	Ethernet(EthernetConfig),
+	Bridge(BridgeConfig),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SharedInterfaceConfig {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	#[serde(default)]
+	pub depends: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde_inline_default]
+pub struct InterfaceConfig {
+	#[serde(flatten)]
+	pub shared: SharedInterfaceConfig,
+	#[serde(flatten)]
+	pub specific: InterfaceTypeConfig
 }
 
 #[serde_inline_default]

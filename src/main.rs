@@ -5,7 +5,7 @@ pub mod arp;
 
 use clap::{arg, command, Parser, Subcommand};
 use config::Config;
-use interface::ethernet::EthernetInterface;
+use interface::{bridge::BridgeInterface, ethernet::EthernetInterface};
 use link::interface::Interface;
 use futures::future::join_all;
 
@@ -85,16 +85,30 @@ async fn run() {
 		async move {
 			println!("Configuring interface: {:?}", &name);
 
-			match ifconfig.type_ {
-				config::InterfaceType::Ethernet => {
+			// Wait for all depends to be CONFIGURED
+			if let Some(depends) = &ifconfig.shared.depends {
+				for depend in depends {
+					let depend_interface = Interface::get_from_name(&depend);
+					if !depend_interface.exists().await {
+						panic!("Interface {depend} does not exist!");
+					}
+					while depend_interface.get_description().await != "CONFIGURED" {
+						println!("[{name}] Waiting for {depend} to be CONFIGURED");
+						tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+					}
+				}
+			}
+
+			match ifconfig.specific {
+				config::InterfaceTypeConfig::Ethernet(specific) => {
 					let interface = Interface::get_from_name(&name);
 					if !interface.exists().await {
 						panic!("Interface {name} does not exist!");
 					}
-					EthernetInterface::configure(&interface, &ifconfig).await;
-				}
-				config::InterfaceType::Bridge => {
-					unimplemented!();
+					EthernetInterface::configure(&interface, &specific).await;
+				},
+				config::InterfaceTypeConfig::Bridge(specific) => {
+					BridgeInterface::configure(&name, &specific).await;
 				}
 			}
 		}
@@ -113,18 +127,35 @@ async fn reset() {
 		async move {
 			println!("Resetting interface: {:?}", &name);
 
-			match ifconfig.type_ {
-				config::InterfaceType::Ethernet => {
+			match ifconfig.specific {
+				config::InterfaceTypeConfig::Ethernet(_) => {
 					let interface = Interface::get_from_name(&name);
 					if !interface.exists().await {
 						panic!("Interface {name} does not exist!");
 					}
 					interface.down().await;
 					interface.flush_addresses().await;
-				}
-				config::InterfaceType::Bridge => {
-					unimplemented!();
-				}
+					interface.set_description("").await;
+				},
+				config::InterfaceTypeConfig::Bridge(specific) => {
+					let bridge = Interface::get_from_name(&name);
+					if !bridge.exists().await {
+						return;
+					}
+					// Bring all subinterfaces down
+					for ifname in &specific.interfaces {
+						let iface = Interface::get_from_name(ifname);
+						if !iface.exists().await {
+							continue;
+						}
+						iface.set_nomaster().await;
+						iface.down().await;
+					}
+					bridge.down().await;
+					bridge.flush_addresses().await;
+					bridge.set_description("").await;
+					bridge.delete().await;
+				},
 			}
 		}
 	}).collect();

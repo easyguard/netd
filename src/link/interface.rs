@@ -13,6 +13,22 @@ impl Interface {
 		}
 	}
 
+	pub async fn create(name: &str, r#type: &str) -> Interface {
+		let output = Command::new("ip")
+			.arg("link")
+			.arg("add")
+			.arg(name)
+			.arg("type")
+			.arg(r#type)
+			.output()
+			.await
+			.expect("Failed to execute command");
+		assert!(output.status.success());
+		Interface {
+			name: name.to_string(),
+		}
+	}
+
 	/// Check if the interface exists
 	pub async fn exists(&self) -> bool {
 		let output = Command::new("ip")
@@ -144,6 +160,23 @@ impl Interface {
 		assert!(output.status.success());
 	}
 
+	/// Get the interface description
+	pub async fn get_description(&self) -> String {
+		let output = Command::new("ip")
+			.arg("link")
+			.arg("show")
+			.arg(&self.name)
+			.output()
+			.await
+			.expect("Failed to execute command");
+
+		let output = String::from_utf8(output.stdout).expect("Invalid UTF-8");
+		let parts: Vec<&str> = output.split_whitespace().collect();
+		let description = parts[parts.iter().position(|&x| x == "alias").unwrap_or_default() + 1];
+		let description = if description.len() > 2 { &description[1..description.len() - 1] } else { "" };
+		description.to_string()
+	}
+
 	pub async fn get_mac(&self) -> String {
 		let output = Command::new("ip")
 			.arg("link")
@@ -157,6 +190,48 @@ impl Interface {
 		let parts: Vec<&str> = output.split_whitespace().collect();
 		let mac = parts[parts.iter().position(|&x| x == "link/ether").unwrap() + 1];
 		mac.to_string()
+	}
+
+	/// Delete the interface
+	pub async fn delete(&self) {
+		let output = Command::new("ip")
+			.arg("link")
+			.arg("delete")
+			.arg("dev")
+			.arg(&self.name)
+			.output()
+			.await
+			.expect("Failed to execute command");
+		assert!(output.status.success());
+	}
+
+	/// Sets the master of the interface
+	pub async fn set_master(&self, master: &str) {
+		let output = Command::new("ip")
+			.arg("link")
+			.arg("set")
+			.arg("dev")
+			.arg(&self.name)
+			.arg("master")
+			.arg(master)
+			.output()
+			.await
+			.expect("Failed to execute command");
+		assert!(output.status.success());
+	}
+
+	/// Removes the master of the interface
+	pub async fn set_nomaster(&self) {
+		let output = Command::new("ip")
+			.arg("link")
+			.arg("set")
+			.arg("dev")
+			.arg(&self.name)
+			.arg("nomaster")
+			.output()
+			.await
+			.expect("Failed to execute command");
+		assert!(output.status.success())
 	}
 
 }

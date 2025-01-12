@@ -1,27 +1,36 @@
-// use tokio::process::Command;
-
 use std::{net::Ipv4Addr, str::FromStr};
 
 use pnet::{packet::arp::ArpOperations, util::MacAddr};
 
-use crate::{
-	arp::send_arp_packet, config::{EthernetConfig, InterfaceMode}, interface::failover, link::{dhcpc::dhcp_client, dhcpd, interface::Interface}
-};
+use crate::{arp::send_arp_packet, config::{BridgeConfig, InterfaceMode}, link::{dhcpc::dhcp_client, dhcpd, interface::Interface}};
 
-pub struct EthernetInterface {}
+use super::failover;
 
-impl EthernetInterface {
-	pub async fn configure(interface: &Interface, ifconfig: &EthernetConfig) {
-		let ifname = interface.name.clone();
+pub struct BridgeInterface {}
+
+impl BridgeInterface {
+	pub async fn configure(ifname: &String, ifconfig: &BridgeConfig) {
+		let interface = Interface::create(ifname, "bridge").await;
 		interface.up().await;
+		
+		// Add all interfaces to the bridge
+		for member in ifconfig.interfaces.iter() {
+			let member_interface = Interface::get_from_name(member);
+			if !member_interface.exists().await {
+				panic!("[{ifname}] Subinterface {member} does not exist!");
+			}
+			member_interface.up().await;
+			member_interface.set_master(ifname).await;
+		}
+
 		let mut failover_reconfigured = false;
 		if ifconfig.do_failover {
-			failover_reconfigured = failover::failover(interface, &ifname).await;
+			failover_reconfigured = failover::failover(&interface, &ifname).await;
 		}
 		interface.set_description("CONFIGURING").await;
 		if ifconfig.mode == InterfaceMode::Dhcp {
 			println!("[{ifname}] Obtaining DHCP lease");
-			let result = dhcp_client(interface, false).await;
+			let result = dhcp_client(&interface, false).await;
 			if !result {
 				println!("[{ifname}] Could not get DHCP lease");
 			} else {
@@ -68,7 +77,7 @@ impl EthernetInterface {
 			for _ in 0..3 {
 				println!("[{ifname}] Sending gratuitous ARP packet");
 				send_arp_packet(
-					interface,
+					&interface,
 					Ipv4Addr::from_str("10.10.99.1").unwrap(),
 					MacAddr::from_str(&interface.get_mac().await).unwrap(),
 					Ipv4Addr::from_str("10.10.99.1").unwrap(),

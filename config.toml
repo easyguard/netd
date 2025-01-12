@@ -1,7 +1,3 @@
-[dhcp]
-max_lease_time = 7200
-default_lease_time = 600
-
 [renames]
 eth0 = "wan"
 eth1 = "lan"
@@ -19,7 +15,6 @@ do_failover = true
 
 [interfaces.lan.dhcp]
 enabled = true
-subnet = "10.10.99.0"
 netmask = "255.255.255.0"
 router = "10.10.99.1"
 start = "10.10.99.100"
