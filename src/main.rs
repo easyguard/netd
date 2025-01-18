@@ -8,6 +8,7 @@ use config::Config;
 use interface::{bridge::BridgeInterface, ethernet::EthernetInterface};
 use link::interface::Interface;
 use futures::future::join_all;
+use tokio::process::Command;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -111,6 +112,18 @@ async fn run() {
 					BridgeInterface::configure(&name, &specific).await;
 				}
 			}
+
+			// Start services
+			for service in &ifconfig.shared.services {
+				println!("[{name}] Starting service: {service}");
+				let output = Command::new("rc-service")
+					.arg(service)
+					.arg("start")
+					.output()
+					.await
+					.expect("Failed to execute command");
+				println!("[{name}] RC-Service log: {}", String::from_utf8_lossy(&output.stdout));
+			}
 		}
 	}).collect();
 
@@ -126,6 +139,18 @@ async fn reset() {
 		let name = entry.0.clone();
 		async move {
 			println!("Resetting interface: {:?}", &name);
+
+			// Stop services
+			for service in &ifconfig.shared.services {
+				println!("[{name}] Stopping service: {service}");
+				let output = Command::new("rc-service")
+					.arg(service)
+					.arg("stop")
+					.output()
+					.await
+					.expect("Failed to execute command");
+				println!("[{name}] RC-Service log: {}", String::from_utf8_lossy(&output.stdout));
+			}
 
 			match ifconfig.specific {
 				config::InterfaceTypeConfig::Ethernet(_) => {

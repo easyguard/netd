@@ -69,6 +69,9 @@ pub struct SharedInterfaceConfig {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	#[serde(default)]
 	pub depends: Option<Vec<String>>,
+	#[serde(default)]
+	#[serde(skip_serializing_if = "Vec::is_empty")]
+	pub services: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
