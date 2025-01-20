@@ -79,6 +79,14 @@ async fn run() {
 		}
 	}
 
+	if std::env::var("NO_LO_UP").is_err() {
+		let lo = Interface::get_from_name("lo");
+		if !lo.exists().await {
+			panic!("Interface lo does not exist!");
+		}
+		lo.up().await;
+	}
+
 	println!("Configuring {} interfaces!", config.interfaces.len());
 	let futures: Vec<_> = config.interfaces.into_iter().map(|entry| {
 		let ifconfig = entry.1;
