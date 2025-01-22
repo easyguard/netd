@@ -28,9 +28,7 @@ pub async fn failover(interface: &Interface, ifname: &String) -> bool {
 			}
 		}
 	} else {
-		println!(
-			"[{ifname}] No router found on this network, beginning normal configuration"
-		);
+		println!("[{ifname}] No router found on this network, beginning normal configuration");
 	}
 	return failover_reconfigured;
 }

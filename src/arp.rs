@@ -24,7 +24,11 @@ pub fn send_arp_packet(
 	let interfaces = datalink::interfaces();
 
 	let interfaces_name_match = |iface: &NetworkInterface| iface.name == interface.name;
-	let interface = interfaces.into_iter().filter(interfaces_name_match).next().unwrap();
+	let interface = interfaces
+		.into_iter()
+		.filter(interfaces_name_match)
+		.next()
+		.unwrap();
 
 	let (mut tx, _) = match datalink::channel(&interface, Default::default()) {
 		Ok(Channel::Ethernet(tx, rx)) => (tx, rx),

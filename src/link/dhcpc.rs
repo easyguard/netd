@@ -8,8 +8,7 @@ use crate::link::interface::Interface;
 /// Note: Check the return value to see if the command was successful
 pub async fn dhcp_client(interface: &Interface, no_bg: bool) -> bool {
 	let mut cmd = Command::new("udhcpc");
-	cmd.arg("-i")
-		.arg(&interface.name);
+	cmd.arg("-i").arg(&interface.name);
 	if no_bg {
 		cmd.arg("-n");
 		cmd.arg("-q");

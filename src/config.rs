@@ -14,13 +14,15 @@ pub struct Config {
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum InterfaceMode {
-	Static, Dhcp
+	Static,
+	Dhcp,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum InterfaceType {
-	Ethernet, Bridge
+	Ethernet,
+	Bridge,
 }
 
 #[serde_inline_default]
@@ -80,7 +82,7 @@ pub struct InterfaceConfig {
 	#[serde(flatten)]
 	pub shared: SharedInterfaceConfig,
 	#[serde(flatten)]
-	pub specific: InterfaceTypeConfig
+	pub specific: InterfaceTypeConfig,
 }
 
 #[serde_inline_default]
@@ -109,7 +111,7 @@ impl Default for InterfaceDhcpConfig {
 			router: "".to_string(),
 			start: "".to_string(),
 			end: "".to_string(),
-			dns: "".to_string()
+			dns: "".to_string(),
 		}
 	}
 }

@@ -8,7 +8,7 @@ impl BridgeInterface {
 	pub async fn configure(ifname: &String, ifconfig: &BridgeConfig) {
 		let interface = Interface::create(ifname, "bridge").await;
 		interface.up().await;
-		
+
 		// Add all interfaces to the bridge
 		for member in ifconfig.interfaces.iter() {
 			let member_interface = Interface::get_from_name(member);

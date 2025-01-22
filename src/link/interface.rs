@@ -82,7 +82,7 @@ impl Interface {
 			.expect("Failed to execute command");
 		assert!(output.status.success());
 	}
-	
+
 	/// Check if the interface is up
 	pub async fn is_up(&self) -> bool {
 		let output = Command::new("ip")
@@ -173,7 +173,11 @@ impl Interface {
 		let output = String::from_utf8(output.stdout).expect("Invalid UTF-8");
 		let parts: Vec<&str> = output.split_whitespace().collect();
 		let description = parts[parts.iter().position(|&x| x == "alias").unwrap_or_default() + 1];
-		let description = if description.len() > 2 { &description[1..description.len() - 1] } else { "" };
+		let description = if description.len() > 2 {
+			&description[1..description.len() - 1]
+		} else {
+			""
+		};
 		description.to_string()
 	}
 
@@ -233,5 +237,4 @@ impl Interface {
 			.expect("Failed to execute command");
 		assert!(output.status.success())
 	}
-
 }
