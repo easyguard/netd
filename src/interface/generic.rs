@@ -36,6 +36,10 @@ pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface:
 			.await;
 	}
 
+	if ifconfig.gateway.is_some() {
+		routing::add_route_via(ifconfig.gateway.as_ref().unwrap().as_str(), "default").await;
+	}
+
 	println!("[{ifname}] DHCP: {:?}", ifconfig.dhcp.enabled);
 
 	if ifconfig.dhcp.enabled {

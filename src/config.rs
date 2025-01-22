@@ -31,6 +31,8 @@ pub struct GenericInterfaceConfig {
 	pub address: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub netmask: Option<u8>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub gateway: Option<String>,
 	#[serde(skip_serializing_if = "std::ops::Not::not")]
 	#[serde_inline_default(false)]
 	pub do_failover: bool,
