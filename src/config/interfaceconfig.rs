@@ -1,15 +1,9 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 
-#[serde_inline_default]
-#[derive(Serialize, Deserialize)]
-pub struct Config {
-	#[serde_inline_default(HashMap::new())]
-	pub renames: HashMap<String, String>,
-	pub interfaces: HashMap<String, InterfaceConfig>,
-}
+//
+// Basic types
+//
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -18,12 +12,9 @@ pub enum InterfaceMode {
 	Dhcp,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum InterfaceType {
-	Ethernet,
-	Bridge,
-}
+//
+// Generic
+//
 
 #[serde_inline_default]
 #[derive(Serialize, Deserialize)]
@@ -41,48 +32,6 @@ pub struct GenericInterfaceConfig {
 	#[serde(skip_serializing_if = "InterfaceDhcpConfig::is_disabled")]
 	#[serde(default)]
 	pub dhcp: InterfaceDhcpConfig,
-}
-
-#[serde_inline_default]
-#[derive(Serialize, Deserialize)]
-pub struct EthernetConfig {
-	#[serde(flatten)]
-	pub generic: GenericInterfaceConfig,
-}
-
-#[serde_inline_default]
-#[derive(Serialize, Deserialize)]
-pub struct BridgeConfig {
-	pub interfaces: Vec<String>,
-	#[serde(flatten)]
-	pub generic: GenericInterfaceConfig,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "camelCase")]
-pub enum InterfaceTypeConfig {
-	Ethernet(EthernetConfig),
-	Bridge(BridgeConfig),
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct SharedInterfaceConfig {
-	#[serde(skip_serializing_if = "Option::is_none")]
-	#[serde(default)]
-	pub depends: Option<Vec<String>>,
-	#[serde(default)]
-	#[serde(skip_serializing_if = "Vec::is_empty")]
-	pub services: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde_inline_default]
-pub struct InterfaceConfig {
-	#[serde(flatten)]
-	pub shared: SharedInterfaceConfig,
-	#[serde(flatten)]
-	pub specific: InterfaceTypeConfig,
 }
 
 #[serde_inline_default]
@@ -116,9 +65,60 @@ impl Default for InterfaceDhcpConfig {
 	}
 }
 
-impl Config {
-	pub fn load() -> Self {
-		let config = std::fs::read_to_string("/etc/config/network.toml").unwrap();
-		toml::from_str(&config).unwrap()
-	}
+//
+// Specific Interface Types
+//
+
+#[serde_inline_default]
+#[derive(Serialize, Deserialize)]
+pub struct EthernetConfig {
+	#[serde(flatten)]
+	pub generic: GenericInterfaceConfig,
+}
+
+#[serde_inline_default]
+#[derive(Serialize, Deserialize)]
+pub struct BridgeConfig {
+	pub interfaces: Vec<String>,
+	#[serde(flatten)]
+	pub generic: GenericInterfaceConfig,
+}
+
+//
+//
+//
+
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+pub enum InterfaceTypeConfig {
+	Ethernet(EthernetConfig),
+	Bridge(BridgeConfig),
+}
+
+//
+// Shared Interface Config
+//
+
+#[derive(Serialize, Deserialize)]
+pub struct SharedInterfaceConfig {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	#[serde(default)]
+	pub depends: Option<Vec<String>>,
+	#[serde(default)]
+	#[serde(skip_serializing_if = "Vec::is_empty")]
+	pub services: Vec<String>,
+}
+
+//
+// Interface Config
+//
+
+#[derive(Serialize, Deserialize)]
+#[serde_inline_default]
+pub struct InterfaceConfig {
+	#[serde(flatten)]
+	pub shared: SharedInterfaceConfig,
+	#[serde(flatten)]
+	pub specific: InterfaceTypeConfig,
 }
