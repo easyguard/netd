@@ -25,7 +25,7 @@ pub enum InterfaceType {
 
 #[serde_inline_default]
 #[derive(Serialize, Deserialize)]
-pub struct EthernetConfig {
+pub struct GenericInterfaceConfig {
 	pub mode: InterfaceMode,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,
@@ -41,19 +41,17 @@ pub struct EthernetConfig {
 
 #[serde_inline_default]
 #[derive(Serialize, Deserialize)]
+pub struct EthernetConfig {
+	#[serde(flatten)]
+	pub generic: GenericInterfaceConfig,
+}
+
+#[serde_inline_default]
+#[derive(Serialize, Deserialize)]
 pub struct BridgeConfig {
 	pub interfaces: Vec<String>,
-	pub mode: InterfaceMode,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub address: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub netmask: Option<u8>,
-	#[serde(skip_serializing_if = "std::ops::Not::not")]
-	#[serde_inline_default(false)]
-	pub do_failover: bool,
-	#[serde(skip_serializing_if = "InterfaceDhcpConfig::is_disabled")]
-	#[serde(default)]
-	pub dhcp: InterfaceDhcpConfig,
+	#[serde(flatten)]
+	pub generic: GenericInterfaceConfig,
 }
 
 #[derive(Serialize, Deserialize)]
