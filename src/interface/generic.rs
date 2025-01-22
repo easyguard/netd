@@ -3,10 +3,7 @@ use std::{net::Ipv4Addr, str::FromStr};
 use pnet::{packet::arp::ArpOperations, util::MacAddr};
 
 use crate::{
-	arp::send_arp_packet,
-	config::{GenericInterfaceConfig, InterfaceMode},
-	interface::failover,
-	link::{dhcpc::dhcp_client, dhcpd, interface::Interface, routing},
+	arp::send_arp_packet, config::{GenericInterfaceConfig, InterfaceMode}, hooks::run_hook, interface::failover, link::{dhcpc::dhcp_client, dhcpd, interface::Interface, routing}
 };
 
 pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface: &Interface) {
@@ -14,6 +11,7 @@ pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface:
 	let mut failover_reconfigured = false;
 	if ifconfig.do_failover {
 		failover_reconfigured = failover::failover(interface, &ifname).await;
+		run_hook(format!("post-failover.{ifname}"));
 	}
 	interface.set_description("CONFIGURING").await;
 	if ifconfig.mode == InterfaceMode::Dhcp {
@@ -50,6 +48,7 @@ pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface:
 		// 	.arg("start")
 		// 	.spawn()
 		// 	.expect("Failed to start service!");
+		run_hook(format!("pre-dhcp-server.{ifname}"));
 		let dhcpserver = dhcpd::DHCPServer::new(
 			ifconfig.dhcp.start.clone(),
 			ifconfig.dhcp.end.clone(),
@@ -60,8 +59,10 @@ pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface:
 			3600,
 		);
 		dhcpserver.start();
+		run_hook(format!("post-dhcp-server.{ifname}"));
 	}
 	interface.set_description("CONFIGURED").await;
+	run_hook(format!("post-configure.{ifname}"));
 
 	if failover_reconfigured {
 		for _ in 0..3 {
@@ -76,5 +77,6 @@ pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface:
 			);
 			tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 		}
+		run_hook(format!("post-garp.{ifname}"));
 	}
 }

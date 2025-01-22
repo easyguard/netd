@@ -2,10 +2,12 @@ pub mod arp;
 mod config;
 mod interface;
 mod link;
+pub mod hooks;
 
 use clap::{arg, command, Parser, Subcommand};
 use config::Config;
 use futures::future::join_all;
+use hooks::run_hook;
 use interface::{bridge::BridgeInterface, ethernet::EthernetInterface};
 use link::interface::Interface;
 use tokio::process::Command;
@@ -158,6 +160,8 @@ async fn reset() {
 			async move {
 				println!("Resetting interface: {:?}", &name);
 
+				run_hook(format!("pre-down.{name}"));
+
 				// Stop services
 				for service in &ifconfig.shared.services {
 					println!("[{name}] Stopping service: {service}");
@@ -203,6 +207,8 @@ async fn reset() {
 						bridge.delete().await;
 					}
 				}
+
+				run_hook(format!("post-down.{name}"));
 			}
 		})
 		.collect();

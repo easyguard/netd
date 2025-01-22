@@ -1,4 +1,4 @@
-use crate::{config::BridgeConfig, link::interface::Interface};
+use crate::{config::BridgeConfig, hooks::run_hook, link::interface::Interface};
 
 use super::generic;
 
@@ -7,7 +7,9 @@ pub struct BridgeInterface {}
 impl BridgeInterface {
 	pub async fn configure(ifname: &String, ifconfig: &BridgeConfig) {
 		let interface = Interface::create(ifname, "bridge").await;
+		run_hook(format!("pre-up.{ifname}"));
 		interface.up().await;
+		run_hook(format!("post-up.{ifname}"));
 
 		// Add all interfaces to the bridge
 		for member in ifconfig.interfaces.iter() {
