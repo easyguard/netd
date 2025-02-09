@@ -64,14 +64,14 @@ pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface:
 	interface.set_description("CONFIGURED").await;
 	run_hook(format!("post-configure.{ifname}"));
 
-	if failover_reconfigured {
+	if failover_reconfigured && ifconfig.address.is_some() {
 		for _ in 0..3 {
 			println!("[{ifname}] Sending gratuitous ARP packet");
 			send_arp_packet(
 				interface,
-				Ipv4Addr::from_str("10.10.99.1").unwrap(),
+				Ipv4Addr::from_str(&ifconfig.address.as_ref().unwrap()).unwrap(),
 				MacAddr::from_str(&interface.get_mac().await).unwrap(),
-				Ipv4Addr::from_str("10.10.99.1").unwrap(),
+				Ipv4Addr::from_str(&ifconfig.address.as_ref().unwrap()).unwrap(),
 				MacAddr::from_str("ff:ff:ff:ff:ff:ff").unwrap(),
 				ArpOperations::Request,
 			);
