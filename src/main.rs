@@ -4,13 +4,15 @@ mod interface;
 mod link;
 pub mod hooks;
 
+use std::{io::{Read as _, Write as _}, os::unix::net::{UnixListener, UnixStream}, sync::Arc};
+
 use clap::{arg, command, Parser, Subcommand};
 use config::Config;
 use futures::future::join_all;
 use hooks::run_hook;
 use interface::{bridge::BridgeInterface, ethernet::EthernetInterface};
 use link::interface::Interface;
-use tokio::process::Command;
+use tokio::{process::Command, sync::Mutex};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -49,7 +51,20 @@ async fn main() {
 			run().await;
 		}
 		Commands::RESET {} => {
-			reset().await;
+			// reset().await;
+			let confirm = dialoguer::Confirm::new()
+				.with_prompt("Are you sure you want to reset? All interfaces will be brought down!")
+				.interact()
+				.unwrap();
+			if !confirm {
+				return;
+			}
+			let mut unix_stream =
+			UnixStream::connect("/tmp/netd.sock").expect("Could not connect to daemon socket. Is netd running?");
+			unix_stream
+				.write(b"reset")
+				.expect("Failed to write to unix stream");
+			println!("Sent reset command to daemon");
 		}
 		Commands::RELOAD {} => {
 			// Confirm that the user wants to reload
@@ -60,17 +75,59 @@ async fn main() {
 			if !confirm {
 				return;
 			}
-			reset().await;
-			run().await;
+			// reset().await;
+			// run().await;
+			let mut unix_stream =
+        UnixStream::connect("/tmp/netd.sock").expect("Could not connect to daemon socket. Is netd running?");
+				unix_stream
+				.write(b"reload")
+				.expect("Failed to write to unix stream");
+			println!("Sent reload command to daemon");
 		}
 	}
 }
 
 async fn run() {
-	let config = Config::load();
+	let current_config = Arc::new(Mutex::new(Config::load()));
+	let configure_thread_cfg = Arc::clone(&current_config);
+	let socket_cfg = Arc::clone(&current_config);
+	tokio::spawn(async move {
+		let config = configure_thread_cfg.lock().await;
+		configure(&config).await;
+	});
+	let socket_path = "/tmp/netd.sock";
+	let unix_listener = UnixListener::bind(socket_path).expect("Failed to bind to socket. Is netd already running?");
+	loop {
+		let (mut unix_stream, socket_addr) = unix_listener
+			.accept()
+			.expect("Failed to accept connection");
+		println!("Accepted connection from {:?}", socket_addr);
+		let config = socket_cfg.lock().await;
+		handle_stream(&mut unix_stream, &config).await;
+	}
+}
+
+async fn handle_stream(mut stream: &UnixStream, mut config: &Config) {
+	let mut message = String::new();
+	stream
+		.read_to_string(&mut message)
+		.expect("Failed at reading the unix stream");
+	let message = message.trim();
+	println!("Received message: {:?}", message);
+	if message == "reload" {
+		reset(&config).await;
+		let new_config = Config::load();
+		config = &new_config;
+		configure(&config).await;
+	} else if message == "reset" {
+		reset(&config).await;
+	}
+}
+
+async fn configure(config: &Config) {
 	if config.renames.len() != 0 {
 		println!("Renaming {} interfaces!", config.renames.len());
-		for entry in config.renames {
+		for entry in config.renames.clone() {
 			let old_name = entry.0;
 			let new_name = entry.1;
 			let mut interface = Interface::get_from_name(&old_name);
@@ -92,7 +149,7 @@ async fn run() {
 	println!("Configuring {} interfaces!", config.interfaces.len());
 	let futures: Vec<_> = config
 		.interfaces
-		.into_iter()
+		.iter()
 		.map(|entry| {
 			let ifconfig = entry.1;
 			let name = entry.0.clone();
@@ -113,7 +170,7 @@ async fn run() {
 					}
 				}
 
-				match ifconfig.specific {
+				match &ifconfig.specific {
 					config::InterfaceTypeConfig::Ethernet(specific) => {
 						let interface = Interface::get_from_name(&name);
 						if !interface.exists().await {
@@ -147,13 +204,12 @@ async fn run() {
 	join_all(futures).await;
 }
 
-async fn reset() {
-	let config = Config::load();
+async fn reset(config: &Config) {
 	println!("Resetting {} interfaces!", config.interfaces.len());
 
 	let futures: Vec<_> = config
 		.interfaces
-		.into_iter()
+		.iter()
 		.map(|entry| {
 			let ifconfig = entry.1;
 			let name = entry.0.clone();
@@ -177,7 +233,7 @@ async fn reset() {
 					);
 				}
 
-				match ifconfig.specific {
+				match &ifconfig.specific {
 					config::InterfaceTypeConfig::Ethernet(_) => {
 						let interface = Interface::get_from_name(&name);
 						if !interface.exists().await {
@@ -216,7 +272,7 @@ async fn reset() {
 	join_all(futures).await;
 
 	println!("Renaming {} interfaces!", config.renames.len());
-	for entry in config.renames {
+	for entry in &config.renames {
 		let old_name = entry.0;
 		let new_name = entry.1;
 		let mut interface = Interface::get_from_name(&new_name);
