@@ -40,7 +40,11 @@ enum Commands {
 	RESET {},
 
 	/// Reload
-	RELOAD {},
+	RELOAD {
+		/// Confirm the reload
+		#[arg(short, long)]
+		yes: bool,
+	},
 }
 
 #[tokio::main]
@@ -70,14 +74,16 @@ async fn main() {
 				.expect("Failed to write to unix stream");
 			println!("Sent reset command to daemon");
 		}
-		Commands::RELOAD {} => {
+		Commands::RELOAD { yes } => {
 			// Confirm that the user wants to reload
-			let confirm = dialoguer::Confirm::new()
-				.with_prompt("Are you sure you want to reload?")
-				.interact()
-				.unwrap();
-			if !confirm {
-				return;
+			if !yes {
+				let confirm = dialoguer::Confirm::new()
+					.with_prompt("Are you sure you want to reload?")
+					.interact()
+					.unwrap();
+				if !confirm {
+					return;
+				}
 			}
 			// reset().await;
 			// run().await;
