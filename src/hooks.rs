@@ -10,7 +10,10 @@ pub fn run_hook(hook: String) {
 		.output()
 		.expect("Failed to run hook");
 	if !output.status.success() {
-		println!("[{hook}] Hook failed: {}", String::from_utf8_lossy(&output.stderr));
+		println!(
+			"[{hook}] Hook failed: {}",
+			String::from_utf8_lossy(&output.stderr)
+		);
 	}
 	println!("[{hook}] Hook ran successfully");
 }

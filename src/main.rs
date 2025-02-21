@@ -1,10 +1,14 @@
 pub mod arp;
 mod config;
+pub mod hooks;
 mod interface;
 mod link;
-pub mod hooks;
 
-use std::{io::{Read as _, Write as _}, os::unix::net::{UnixListener, UnixStream}, sync::Arc};
+use std::{
+	io::{Read as _, Write as _},
+	os::unix::net::{UnixListener, UnixStream},
+	sync::Arc,
+};
 
 use clap::{arg, command, Parser, Subcommand};
 use config::Config;
@@ -59,8 +63,8 @@ async fn main() {
 			if !confirm {
 				return;
 			}
-			let mut unix_stream =
-			UnixStream::connect("/tmp/netd.sock").expect("Could not connect to daemon socket. Is netd running?");
+			let mut unix_stream = UnixStream::connect("/tmp/netd.sock")
+				.expect("Could not connect to daemon socket. Is netd running?");
 			unix_stream
 				.write(b"reset")
 				.expect("Failed to write to unix stream");
@@ -77,9 +81,9 @@ async fn main() {
 			}
 			// reset().await;
 			// run().await;
-			let mut unix_stream =
-        UnixStream::connect("/tmp/netd.sock").expect("Could not connect to daemon socket. Is netd running?");
-				unix_stream
+			let mut unix_stream = UnixStream::connect("/tmp/netd.sock")
+				.expect("Could not connect to daemon socket. Is netd running?");
+			unix_stream
 				.write(b"reload")
 				.expect("Failed to write to unix stream");
 			println!("Sent reload command to daemon");
@@ -96,11 +100,11 @@ async fn run() {
 		configure(&config).await;
 	});
 	let socket_path = "/tmp/netd.sock";
-	let unix_listener = UnixListener::bind(socket_path).expect("Failed to bind to socket. Is netd already running?");
+	let unix_listener = UnixListener::bind(socket_path)
+		.expect("Failed to bind to socket. Is netd already running?");
 	loop {
-		let (mut unix_stream, socket_addr) = unix_listener
-			.accept()
-			.expect("Failed to accept connection");
+		let (mut unix_stream, socket_addr) =
+			unix_listener.accept().expect("Failed to accept connection");
 		println!("Accepted connection from {:?}", socket_addr);
 		let config = socket_cfg.lock().await;
 		handle_stream(&mut unix_stream, &config).await;

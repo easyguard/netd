@@ -3,7 +3,11 @@ use std::{net::Ipv4Addr, str::FromStr};
 use pnet::{packet::arp::ArpOperations, util::MacAddr};
 
 use crate::{
-	arp::send_arp_packet, config::{GenericInterfaceConfig, InterfaceMode}, hooks::run_hook, interface::failover, link::{dhcpc::dhcp_client, dhcpd, interface::Interface, routing}
+	arp::send_arp_packet,
+	config::{GenericInterfaceConfig, InterfaceMode},
+	hooks::run_hook,
+	interface::failover,
+	link::{dhcpc::dhcp_client, dhcpd, interface::Interface, routing},
 };
 
 pub async fn generic_configuration(ifconfig: &GenericInterfaceConfig, interface: &Interface) {
