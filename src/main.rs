@@ -112,12 +112,11 @@ async fn run() {
 		let (mut unix_stream, socket_addr) =
 			unix_listener.accept().expect("Failed to accept connection");
 		println!("Accepted connection from {:?}", socket_addr);
-		let config = socket_cfg.lock().await;
-		handle_stream(&mut unix_stream, &config).await;
+		handle_stream(&mut unix_stream, &socket_cfg).await;
 	}
 }
 
-async fn handle_stream(mut stream: &UnixStream, mut config: &Config) {
+async fn handle_stream(mut stream: &UnixStream, config: &Arc<Mutex<Config>>) {
 	let mut message = String::new();
 	stream
 		.read_to_string(&mut message)
@@ -125,12 +124,13 @@ async fn handle_stream(mut stream: &UnixStream, mut config: &Config) {
 	let message = message.trim();
 	println!("Received message: {:?}", message);
 	if message == "reload" {
-		reset(&config).await;
-		let new_config = Config::load();
-		config = &new_config;
-		configure(&config).await;
+		let mut config_guard = config.lock().await;
+		reset(&config_guard).await;
+		*config_guard = Config::load();
+		configure(&config_guard).await;
 	} else if message == "reset" {
-		reset(&config).await;
+		let config_guard = config.lock().await;
+		reset(&config_guard).await;
 	}
 }
 
